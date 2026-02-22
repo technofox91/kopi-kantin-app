@@ -48,7 +48,7 @@ export default function Home() {
   }, [])
 
   // --- CRUD FUNCTIONS (Untouched, purely functional) ---
-  const handleSaveRecipeRule = async (e) => {
+  const handleSaveRecipeRule = async (e: any) => {
     e.preventDefault(); setBuilderMessage('Saving...')
     if (!recipeMenuId || !recipeMaterialId || !recipeQty) return
     const { error } = await supabase.from('recipes').insert({ menu_item_id: recipeMenuId, raw_material_id: recipeMaterialId, quantity_needed: parseFloat(recipeQty) })
@@ -56,13 +56,13 @@ export default function Home() {
     else { setBuilderMessage('Success!'); setRecipeQty(''); fetchData() }
   }
 
-  const handleDeleteRule = async (recipeId) => {
+  const handleDeleteRule = async (recipeId: any) => {
     const { error } = await supabase.from('recipes').delete().eq('id', recipeId)
     if (!error) fetchData()
     else alert("Error deleting: " + error.message)
   }
 
-  const handleProductionRun = async (e) => {
+  const handleProductionRun = async (e: any) => {
     e.preventDefault(); setProdMessage('Brewing batch...')
     if (!selectedMenuItem || productionQuantity <= 0) return
     const { error } = await supabase.rpc('deduct_ingredients', { p_menu_item_id: selectedMenuItem, p_quantity: parseInt(productionQuantity) })
@@ -70,7 +70,7 @@ export default function Home() {
     else { setProdMessage(`Success! Deducted ingredients.`); fetchData() }
   }
 
-  const handleAddRawMaterial = async (e) => {
+  const handleAddRawMaterial = async (e: any) => {
     e.preventDefault(); setRawMessage('Adding...')
     if (!rawName || !rawUnit) return
     const { error } = await supabase.from('raw_materials').insert({ name: rawName, unit: rawUnit, current_stock: parseFloat(rawStock || 0) })
@@ -78,7 +78,7 @@ export default function Home() {
     else { setRawMessage(`Success!`); setRawName(''); setRawStock(''); fetchData() }
   }
 
-  const handleRestock = async (e) => {
+  const handleRestock = async (e: any) => {
     e.preventDefault(); setRestockMessage('Updating...')
     if (!restockId || !restockAmount) return
     const item = rawMaterials.find(r => r.id === restockId)
@@ -88,7 +88,7 @@ export default function Home() {
     else { setRestockMessage(`Success!`); setRestockId(''); setRestockAmount(''); fetchData() }
   }
 
-  const handleDeleteRawMaterial = async (id) => {
+  const handleDeleteRawMaterial = async (id: any) => {
     if (!window.confirm("Are you sure you want to delete this ingredient?")) return;
     const { error } = await supabase.from('raw_materials').delete().eq('id', id)
     if (error) {
@@ -97,7 +97,7 @@ export default function Home() {
     } else fetchData()
   }
 
-  const handleAddMenuItem = async (e) => {
+  const handleAddMenuItem = async (e: any) => {
     e.preventDefault(); setMenuMessage('Adding...')
     if (!menuName) return
     const { error } = await supabase.from('menu_items').insert({ name: menuName, sku: menuSku })
@@ -105,7 +105,7 @@ export default function Home() {
     else { setMenuMessage(`Success!`); setMenuName(''); setMenuSku(''); fetchData() }
   }
 
-  const handleDeleteMenuItem = async (id) => {
+  const handleDeleteMenuItem = async (id: any) => {
     if (!window.confirm("Delete this menu item? Its recipe rules will also be deleted automatically.")) return;
     const { error } = await supabase.from('menu_items').delete().eq('id', id)
     if (error) alert("Error deleting: " + error.message)
@@ -228,7 +228,7 @@ export default function Home() {
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-1">
               {displayedRecipes.length === 0 && <p className="text-sm text-slate-500 italic">No ingredients mapped yet.</p>}
               <ul className="space-y-3">
-                {displayedRecipes.map((rule) => (
+                {displayedRecipes.map((rule: any) => (
                   <li key={rule.id} className="flex justify-between items-center text-sm">
                     <span className="text-slate-700">
                       <span className="font-bold text-slate-900">{rule.quantity_needed}</span> {rule.raw_materials?.unit} <span className="text-slate-600">{rule.raw_materials?.name}</span>
@@ -255,7 +255,7 @@ export default function Home() {
             <form onSubmit={handleRestock} className="flex gap-2">
               <select value={restockId} onChange={(e) => setRestockId(e.target.value)} className={`${inputClass} !mb-0 flex-1`}>
                 <option value="">-- Select Item --</option>
-                {rawMaterials.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
               <input type="number" placeholder="+Qty" value={restockAmount} onChange={(e) => setRestockAmount(e.target.value)} className={`${inputClass} !mb-0 w-24`} required />
               <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-4 text-sm font-bold transition-colors">Add</button>
@@ -307,7 +307,7 @@ export default function Home() {
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-1 overflow-y-auto max-h-40 custom-scrollbar">
               {menuItems.length === 0 && <p className="text-sm text-slate-500 italic">Menu is empty.</p>}
               <ul className="space-y-3">
-                {menuItems.map((item) => (
+                {menuItems.map((item: any) => (
                   <li key={item.id} className="flex justify-between items-center text-sm group">
                     <span className="font-semibold text-slate-700">{item.name}</span>
                     <button onClick={() => handleDeleteMenuItem(item.id)} className="text-slate-300 hover:text-rose-600 transition-colors opacity-0 group-hover:opacity-100" title="Delete Menu Item">
