@@ -65,7 +65,7 @@ export default function Home() {
   const handleProductionRun = async (e: any) => {
     e.preventDefault(); setProdMessage('Brewing batch...')
     if (!selectedMenuItem || productionQuantity <= 0) return
-    const { error } = await supabase.rpc('deduct_ingredients', { p_menu_item_id: selectedMenuItem, p_quantity: parseInt(productionQuantity) })
+    const { error } = await supabase.rpc('deduct_ingredients', { p_menu_item_id: selectedMenuItem, p_quantity: productionQuantity.toString() })
     if (error) setProdMessage('Error: ' + error.message)
     else { setProdMessage(`Success! Deducted ingredients.`); fetchData() }
   }
