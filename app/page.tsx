@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabase'
 
 export default function Home() {
-  const [rawMaterials, setRawMaterials] = useState([])
-  const [menuItems, setMenuItems] = useState([])
-  const [recipes, setRecipes] = useState([])
+  const [rawMaterials, setRawMaterials] = useState<any[]>([])
+  const [menuItems, setMenuItems] = useState<any[]>([])
+  const [recipes, setRecipes] = useState<any[]>([])
   
   // States
   const [recipeMenuId, setRecipeMenuId] = useState('')
