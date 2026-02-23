@@ -5,10 +5,16 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabase'
 
 export default function Home() {
-  // --- NAVIGATION STATE ---
-  // 'home', 'recipes', or 'admin'
-  const [activeTab, setActiveTab] = useState('home')
+  // --- AUTHENTICATION STATE ---
+  const [session, setSession] = useState(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authMessage, setAuthMessage] = useState('')
+  const [isSignUp, setIsSignUp] = useState(false)
 
+  // --- NAVIGATION & DATA STATE ---
+  const [activeTab, setActiveTab] = useState('home')
   const [rawMaterials, setRawMaterials] = useState<any[]>([])
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [recipes, setRecipes] = useState<any[]>([])
@@ -37,6 +43,28 @@ export default function Home() {
   const [menuSku, setMenuSku] = useState('')
   const [menuMessage, setMenuMessage] = useState('')
 
+  // --- INITIALIZATION ---
+  useEffect(() => {
+    // 1. Check for active user session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+    
+    // 2. Listen for login/logout events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // Only fetch data if we are logged in!
+  useEffect(() => {
+    if (session) {
+      fetchData()
+    }
+  }, [session])
+
   const fetchData = async () => {
     const { data: rawData } = await supabase.from('raw_materials').select('*').order('name')
     const { data: menuData } = await supabase.from('menu_items').select('*').order('name')
@@ -47,10 +75,27 @@ export default function Home() {
     if (recipeData) setRecipes(recipeData)
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+  // --- AUTH FUNCTIONS ---
+  const handleAuth = async (e: any) => {
+    e.preventDefault()
+    setAuthLoading(true)
+    setAuthMessage('')
+    
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) setAuthMessage(error.message)
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) setAuthMessage('Invalid login credentials.')
+    }
+    setAuthLoading(false)
+  }
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  // --- CRUD FUNCTIONS ---
   const handleSaveRecipeRule = async (e: any) => {
     e.preventDefault(); setBuilderMessage('Saving...')
     if (!recipeMenuId || !recipeMaterialId || !recipeQty) return
@@ -122,10 +167,58 @@ export default function Home() {
   const cardClass = "bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col transition-all"
   const titleClass = "text-xl font-bold text-slate-900 mb-6"
 
+  // ==========================================
+  // VIEW 1: THE LOGIN SCREEN (If not logged in)
+  // ==========================================
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-6 selection:bg-blue-200">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 mb-2">
+              Kopi Kantin <span className="text-blue-600">HQ</span>
+            </h1>
+            <p className="text-slate-500 font-medium text-sm">Authorized Personnel Only</p>
+          </div>
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div>
+              <label className={labelClass}>Email Address</label>
+              <input type="email" placeholder="barista@kopikantin.com" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass + " !mb-0"} required />
+            </div>
+            <div>
+              <label className={labelClass}>Password</label>
+              <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass + " !mb-0"} required />
+            </div>
+            
+            <button type="submit" disabled={authLoading} className="w-full text-white bg-blue-600 hover:bg-blue-700 font-bold rounded-xl text-sm px-5 py-3.5 transition-colors shadow-sm disabled:opacity-70 mt-4">
+              {authLoading ? 'Authenticating...' : (isSignUp ? 'Create Account' : 'Secure Login')}
+            </button>
+            
+            {authMessage && (
+              <p className={`text-sm text-center font-medium mt-3 ${authMessage.includes('Invalid') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {authMessage}
+              </p>
+            )}
+          </form>
+
+          <div className="mt-8 text-center">
+            <button onClick={() => {setIsSignUp(!isSignUp); setAuthMessage('');}} className="text-sm text-slate-500 hover:text-blue-600 font-semibold transition-colors">
+              {isSignUp ? "Already have an account? Sign In" : "Need access? Create Account"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ==========================================
+  // VIEW 2: THE DASHBOARD (If logged in)
+  // ==========================================
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 md:pb-12 font-sans selection:bg-blue-200">
       
-      {/* HEADER */}
+      {/* HEADER WITH LOGOUT */}
       <div className="bg-white border-b border-slate-200 pt-10 pb-6 px-6 mb-6 sticky top-0 z-40">
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div>
@@ -135,11 +228,18 @@ export default function Home() {
             <p className="text-slate-500 text-sm font-medium mt-1">Production System</p>
           </div>
           
-          {/* Desktop Navigation (Hidden on mobile) */}
-          <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
-            <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
-            <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
-            <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
+          <div className="flex items-center gap-4">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
+              <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
+              <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
+              <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
+            </div>
+            
+            {/* Logout Button */}
+            <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-rose-600 transition-colors bg-slate-50 hover:bg-rose-50 px-3 py-2 rounded-lg">
+              Log Out
+            </button>
           </div>
         </div>
       </div>
@@ -279,7 +379,6 @@ export default function Home() {
                 {rawMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{rawMessage}</p>}
               </div>
 
-              {/* Danger Zone: Delete Raw Material */}
               <div>
                  <h3 className="text-sm font-bold text-rose-600 mb-3 flex items-center gap-2">Danger Zone: Delete Material</h3>
                  <ul className="divide-y divide-slate-100">
@@ -326,19 +425,16 @@ export default function Home() {
       {/* --- MOBILE BOTTOM NAVIGATION --- */}
       <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-white/90 backdrop-blur-md border-t border-slate-200 flex justify-around items-start pt-3 md:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.05)] pb-safe">
         
-        {/* Dashboard Tab */}
         <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'home' ? 'text-blue-600' : 'text-slate-400'}`}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
           <span className="text-[10px] font-bold tracking-wide">Home</span>
         </button>
 
-        {/* Recipes Tab */}
         <button onClick={() => setActiveTab('recipes')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'recipes' ? 'text-blue-600' : 'text-slate-400'}`}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
           <span className="text-[10px] font-bold tracking-wide">Recipes</span>
         </button>
 
-        {/* Admin Tab */}
         <button onClick={() => setActiveTab('admin')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'admin' ? 'text-blue-600' : 'text-slate-400'}`}>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
           <span className="text-[10px] font-bold tracking-wide">Admin</span>
