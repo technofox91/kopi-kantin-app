@@ -254,12 +254,12 @@ export default function Home() {
               Log Delivery (Restock)
             </h3>
             <form onSubmit={handleRestock} className="flex gap-2">
-              <select value={restockId} onChange={(e) => setRestockId(e.target.value)} className={`${inputClass} !mb-0 flex-1`}>
-                <option value="">-- Select Item --</option>
-                {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              <select value={restockId} onChange={(e: any) => setRestockId(e.target.value)} className={`${inputClass} !mb-0 w-3/5`} required>
+              <option value="">-- Select Item --</option>
+              {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
-              <input type="number" placeholder="+Qty" value={restockAmount} onChange={(e) => setRestockAmount(e.target.value)} className={`${inputClass} !mb-0 w-24`} required />
-              <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-4 text-sm font-bold transition-colors">Add</button>
+              <input type="number" placeholder="+Qty" value={restockAmount} onChange={(e: any) => setRestockAmount(e.target.value)} className={`${inputClass} !mb-0 w-1/5`} required />
+              <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-2 text-sm font-bold transition-colors w-1/5">Add</button>
             </form>
             {restockMessage && <p className={`mt-2 text-xs font-medium ${restockMessage.includes('Error') ? 'text-rose-600' : 'text-emerald-600'}`}>{restockMessage}</p>}
           </div>
