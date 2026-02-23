@@ -7,7 +7,7 @@ import { supabase } from '../utils/supabase'
 export default function Home() {
   // --- AUTHENTICATION & ROLE STATE ---
   const [session, setSession] = useState(null)
-  const [userRole, setUserRole] = useState(null) // 'admin' or 'staff'
+  const [userRole, setUserRole] = useState(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
@@ -19,6 +19,7 @@ export default function Home() {
   const [rawMaterials, setRawMaterials] = useState<any[]>([])
   const [menuItems, setMenuItems] = useState<any[]>([])
   const [recipes, setRecipes] = useState<any[]>([])
+  const [teamMembers, setTeamMembers] = useState<any[]>([]) // NEW: Team State
   
   const [recipeMenuId, setRecipeMenuId] = useState('')
   const [recipeMaterialId, setRecipeMaterialId] = useState('')
@@ -63,11 +64,14 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Fetch the user's role from our new profiles table
+  // NEW BOUNCER LOGIC: If profile is missing, kick them out
   const fetchRole = async (userId: string) => {
     const { data } = await supabase.from('profiles').select('role').eq('id', userId).single()
     if (data) {
       setUserRole(data.role)
+    } else {
+      alert("ACCESS DENIED: Your account has been revoked by the Administrator.")
+      handleLogout()
     }
   }
 
@@ -81,10 +85,12 @@ export default function Home() {
     const { data: rawData } = await supabase.from('raw_materials').select('*').order('name')
     const { data: menuData } = await supabase.from('menu_items').select('*').order('name')
     const { data: recipeData } = await supabase.from('recipes').select('id, menu_item_id, quantity_needed, raw_materials(name, unit)')
+    const { data: teamData } = await supabase.from('profiles').select('*').order('role') // Fetch Team
       
     if (rawData) setRawMaterials(rawData)
     if (menuData) setMenuItems(menuData)
     if (recipeData) setRecipes(recipeData)
+    if (teamData) setTeamMembers(teamData)
   }
 
   // --- AUTH FUNCTIONS ---
@@ -98,8 +104,8 @@ export default function Home() {
       if (error) {
         setAuthMessage(error.message)
       } else if (data.user) {
-        // Automatically create a 'staff' profile for new signups
-        await supabase.from('profiles').insert({ id: data.user.id, role: 'staff' })
+        // NEW: Save the email to the profile so the Admin can see it
+        await supabase.from('profiles').insert({ id: data.user.id, role: 'staff', email: email })
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -110,10 +116,18 @@ export default function Home() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    setActiveTab('home') // Reset view on logout
+    setActiveTab('home') 
   }
 
   // --- CRUD FUNCTIONS ---
+  // NEW: Revoke Staff Access
+  const handleDeleteStaff = async (id: any) => {
+    if (!window.confirm("Are you sure you want to revoke access for this user?")) return;
+    const { error } = await supabase.from('profiles').delete().eq('id', id)
+    if (error) alert("Error: " + error.message)
+    else fetchData()
+  }
+
   const handleSaveRecipeRule = async (e: any) => {
     e.preventDefault(); setBuilderMessage('Saving...')
     if (!recipeMenuId || !recipeMaterialId || !recipeQty) return
@@ -245,19 +259,15 @@ export default function Home() {
             </h1>
             <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
               Production System 
-              {/* Show VIP Badge if Admin */}
               {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Admin</span>}
-              {/* Show Staff Badge if Staff */}
               {userRole === 'staff' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Staff Barista</span>}
             </p>
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Desktop Navigation */}
             <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
               <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
               
-              {/* ONLY ADMINS SEE THESE DESKTOP BUTTONS */}
               {userRole === 'admin' && (
                 <>
                   <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
@@ -276,7 +286,7 @@ export default function Home() {
       {/* MAIN CONTENT AREA */}
       <div className="max-w-3xl mx-auto px-6 space-y-6">
         
-        {/* --- TAB 1: DASHBOARD (Everyone sees this) --- */}
+        {/* --- TAB 1: DASHBOARD --- */}
         <div className={activeTab === 'home' ? 'block' : 'hidden'}>
           <div className="space-y-6">
             <div className={`${cardClass} border-t-4 border-t-emerald-500`}>
@@ -316,7 +326,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- TAB 2: RECIPES (Admin Only) --- */}
+        {/* --- TAB 2: RECIPES --- */}
         {userRole === 'admin' && (
           <div className={activeTab === 'recipes' ? 'block' : 'hidden'}>
             <div className="space-y-6">
@@ -368,13 +378,35 @@ export default function Home() {
           </div>
         )}
 
-        {/* --- TAB 3: ADMIN (Admin Only) --- */}
+        {/* --- TAB 3: ADMIN --- */}
         {userRole === 'admin' && (
           <div className={activeTab === 'admin' ? 'block' : 'hidden'}>
             <div className="space-y-6">
+              
+              {/* NEW: TEAM MANAGEMENT UI */}
+              <div className={cardClass}>
+                <h2 className={titleClass}>Team Management</h2>
+                <div>
+                   <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">Active Accounts</h3>
+                   <ul className="divide-y divide-slate-100">
+                    {teamMembers.map((member: any) => (
+                      <li key={member.id} className="py-3 flex justify-between items-center">
+                        <div>
+                          <span className="text-sm font-medium text-slate-800 block">{member.email || 'Unknown User'}</span>
+                          <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${member.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{member.role}</span>
+                        </div>
+                        {/* Protect the Admin from deleting themselves */}
+                        {member.role !== 'admin' && (
+                          <button onClick={() => handleDeleteStaff(member.id)} className="text-rose-500 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">Revoke Access</button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
               <div className={cardClass}>
                 <h2 className={titleClass}>Inventory Admin</h2>
-                
                 <div className="mb-6 pb-6 border-b border-slate-100">
                   <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
                     <span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 
@@ -463,7 +495,6 @@ export default function Home() {
           <span className="text-[10px] font-bold tracking-wide">Home</span>
         </button>
 
-        {/* ONLY ADMINS SEE THESE MOBILE ICONS */}
         {userRole === 'admin' && (
           <>
             <button onClick={() => setActiveTab('recipes')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'recipes' ? 'text-blue-600' : 'text-slate-400'}`}>
