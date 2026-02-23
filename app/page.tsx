@@ -246,7 +246,9 @@ export default function Home() {
             <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
               Production System 
               {/* Show VIP Badge if Admin */}
-              {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Admin</span>}
+              {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Admin</span>}
+              {/* Show Staff Badge if Staff */}
+              {userRole === 'staff' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Staff Barista</span>}
             </p>
           </div>
           
