@@ -5,8 +5,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../utils/supabase'
 
 export default function Home() {
-  // --- AUTHENTICATION STATE ---
+  // --- AUTHENTICATION & ROLE STATE ---
   const [session, setSession] = useState(null)
+  const [userRole, setUserRole] = useState(null) // 'admin' or 'staff'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
@@ -43,22 +44,33 @@ export default function Home() {
   const [menuSku, setMenuSku] = useState('')
   const [menuMessage, setMenuMessage] = useState('')
 
-  // --- INITIALIZATION ---
+  // --- INITIALIZATION & ROLE FETCHING ---
   useEffect(() => {
-    // 1. Check for active user session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
+      if (session) fetchRole(session.user.id)
     })
     
-    // 2. Listen for login/logout events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session) {
+        fetchRole(session.user.id)
+      } else {
+        setUserRole(null)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  // Only fetch data if we are logged in!
+  // Fetch the user's role from our new profiles table
+  const fetchRole = async (userId: string) => {
+    const { data } = await supabase.from('profiles').select('role').eq('id', userId).single()
+    if (data) {
+      setUserRole(data.role)
+    }
+  }
+
   useEffect(() => {
     if (session) {
       fetchData()
@@ -82,8 +94,13 @@ export default function Home() {
     setAuthMessage('')
     
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) setAuthMessage(error.message)
+      const { data, error } = await supabase.auth.signUp({ email, password })
+      if (error) {
+        setAuthMessage(error.message)
+      } else if (data.user) {
+        // Automatically create a 'staff' profile for new signups
+        await supabase.from('profiles').insert({ id: data.user.id, role: 'staff' })
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setAuthMessage('Invalid login credentials.')
@@ -93,6 +110,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    setActiveTab('home') // Reset view on logout
   }
 
   // --- CRUD FUNCTIONS ---
@@ -225,18 +243,27 @@ export default function Home() {
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
               Kopi Kantin <span className="text-blue-600">HQ</span>
             </h1>
-            <p className="text-slate-500 text-sm font-medium mt-1">Production System</p>
+            <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
+              Production System 
+              {/* Show VIP Badge if Admin */}
+              {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">Admin</span>}
+            </p>
           </div>
           
           <div className="flex items-center gap-4">
             {/* Desktop Navigation */}
             <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
               <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
-              <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
-              <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
+              
+              {/* ONLY ADMINS SEE THESE DESKTOP BUTTONS */}
+              {userRole === 'admin' && (
+                <>
+                  <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
+                  <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
+                </>
+              )}
             </div>
             
-            {/* Logout Button */}
             <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-rose-600 transition-colors bg-slate-50 hover:bg-rose-50 px-3 py-2 rounded-lg">
               Log Out
             </button>
@@ -247,7 +274,7 @@ export default function Home() {
       {/* MAIN CONTENT AREA */}
       <div className="max-w-3xl mx-auto px-6 space-y-6">
         
-        {/* --- TAB 1: DASHBOARD --- */}
+        {/* --- TAB 1: DASHBOARD (Everyone sees this) --- */}
         <div className={activeTab === 'home' ? 'block' : 'hidden'}>
           <div className="space-y-6">
             <div className={`${cardClass} border-t-4 border-t-emerald-500`}>
@@ -287,138 +314,142 @@ export default function Home() {
           </div>
         </div>
 
-        {/* --- TAB 2: RECIPES --- */}
-        <div className={activeTab === 'recipes' ? 'block' : 'hidden'}>
-          <div className="space-y-6">
-            <div className={cardClass}>
-              <h2 className={titleClass}>Recipe Engine</h2>
-              <form onSubmit={handleSaveRecipeRule}>
-                <label className={labelClass}>Target Drink</label>
-                <select value={recipeMenuId} onChange={(e: any) => setRecipeMenuId(e.target.value)} className={inputClass}>
-                  <option value="">-- Menu Item --</option>
+        {/* --- TAB 2: RECIPES (Admin Only) --- */}
+        {userRole === 'admin' && (
+          <div className={activeTab === 'recipes' ? 'block' : 'hidden'}>
+            <div className="space-y-6">
+              <div className={cardClass}>
+                <h2 className={titleClass}>Recipe Engine</h2>
+                <form onSubmit={handleSaveRecipeRule}>
+                  <label className={labelClass}>Target Drink</label>
+                  <select value={recipeMenuId} onChange={(e: any) => setRecipeMenuId(e.target.value)} className={inputClass}>
+                    <option value="">-- Menu Item --</option>
+                    {menuItems.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                  <label className={labelClass}>Ingredient Needed</label>
+                  <select value={recipeMaterialId} onChange={(e: any) => setRecipeMaterialId(e.target.value)} className={inputClass}>
+                    <option value="">-- Raw Material --</option>
+                    {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                  <label className={labelClass}>Amount (per 1 bottle)</label>
+                  <input type="number" step="0.1" placeholder="e.g., 35" value={recipeQty} onChange={(e: any) => setRecipeQty(e.target.value)} className={inputClass} />
+                  <button type="submit" className="w-full text-blue-600 bg-blue-50 border border-blue-200 font-bold rounded-lg text-sm px-5 py-3 mt-2">
+                    + Map Ingredient
+                  </button>
+                </form>
+                {builderMessage && <p className={`mt-3 text-sm font-medium text-center ${builderMessage.includes('Error') ? 'text-rose-600' : 'text-blue-600'}`}>{builderMessage}</p>}
+              </div>
+
+              <div className={cardClass}>
+                <h2 className={titleClass}>Recipe BOM Viewer</h2>
+                <select value={viewMenuId} onChange={(e: any) => setViewMenuId(e.target.value)} className={inputClass}>
+                  <option value="">-- Select Drink to Inspect --</option>
                   {menuItems.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
-                <label className={labelClass}>Ingredient Needed</label>
-                <select value={recipeMaterialId} onChange={(e: any) => setRecipeMaterialId(e.target.value)} className={inputClass}>
-                  <option value="">-- Raw Material --</option>
-                  {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
-                <label className={labelClass}>Amount (per 1 bottle)</label>
-                <input type="number" step="0.1" placeholder="e.g., 35" value={recipeQty} onChange={(e: any) => setRecipeQty(e.target.value)} className={inputClass} />
-                <button type="submit" className="w-full text-blue-600 bg-blue-50 border border-blue-200 font-bold rounded-lg text-sm px-5 py-3 mt-2">
-                  + Map Ingredient
-                </button>
-              </form>
-              {builderMessage && <p className={`mt-3 text-sm font-medium text-center ${builderMessage.includes('Error') ? 'text-rose-600' : 'text-blue-600'}`}>{builderMessage}</p>}
+                {viewMenuId && (
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    {displayedRecipes.length === 0 && <p className="text-sm text-slate-500 italic">No ingredients mapped yet.</p>}
+                    <ul className="space-y-3">
+                      {displayedRecipes.map((rule: any) => (
+                        <li key={rule.id} className="flex justify-between items-center text-sm">
+                          <span className="text-slate-700">
+                            <span className="font-bold text-slate-900">{rule.quantity_needed}</span> {rule.raw_materials?.unit} <span className="text-slate-600">{rule.raw_materials?.name}</span>
+                          </span>
+                          <button onClick={() => handleDeleteRule(rule.id)} className="text-slate-400 hover:text-rose-600 p-2">✕</button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
+          </div>
+        )}
 
-            <div className={cardClass}>
-              <h2 className={titleClass}>Recipe BOM Viewer</h2>
-              <select value={viewMenuId} onChange={(e: any) => setViewMenuId(e.target.value)} className={inputClass}>
-                <option value="">-- Select Drink to Inspect --</option>
-                {menuItems.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-              {viewMenuId && (
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  {displayedRecipes.length === 0 && <p className="text-sm text-slate-500 italic">No ingredients mapped yet.</p>}
-                  <ul className="space-y-3">
-                    {displayedRecipes.map((rule: any) => (
-                      <li key={rule.id} className="flex justify-between items-center text-sm">
-                        <span className="text-slate-700">
-                          <span className="font-bold text-slate-900">{rule.quantity_needed}</span> {rule.raw_materials?.unit} <span className="text-slate-600">{rule.raw_materials?.name}</span>
-                        </span>
-                        <button onClick={() => handleDeleteRule(rule.id)} className="text-slate-400 hover:text-rose-600 p-2">✕</button>
+        {/* --- TAB 3: ADMIN (Admin Only) --- */}
+        {userRole === 'admin' && (
+          <div className={activeTab === 'admin' ? 'block' : 'hidden'}>
+            <div className="space-y-6">
+              <div className={cardClass}>
+                <h2 className={titleClass}>Inventory Admin</h2>
+                
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 
+                    Log Delivery (Restock)
+                  </h3>
+                  <form onSubmit={handleRestock} className="flex gap-2">
+                    <select value={restockId} onChange={(e: any) => setRestockId(e.target.value)} className={`${inputClass} !mb-0 w-3/5`} required>
+                      <option value="">-- Select Item --</option>
+                      {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </select>
+                    <input type="number" placeholder="+Qty" value={restockAmount} onChange={(e: any) => setRestockAmount(e.target.value)} className={`${inputClass} !mb-0 w-1/5`} required />
+                    <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-2 text-sm font-bold w-1/5">Add</button>
+                  </form>
+                  {restockMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{restockMessage}</p>}
+                </div>
+
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> 
+                    Create New Raw Material
+                  </h3>
+                  <form onSubmit={handleAddRawMaterial}>
+                    <input type="text" placeholder="Ingredient Name" value={rawName} onChange={(e: any) => setRawName(e.target.value)} className={inputClass} required />
+                    <div className="flex gap-2 mb-4">
+                      <select value={rawUnit} onChange={(e: any) => setRawUnit(e.target.value)} className={`${inputClass} !mb-0 w-1/2`}>
+                        <option value="grams">Grams (g)</option>
+                        <option value="ml">Milliliters (ml)</option>
+                        <option value="pieces">Pieces</option>
+                      </select>
+                      <input type="number" placeholder="Initial Stock" value={rawStock} onChange={(e: any) => setRawStock(e.target.value)} className={`${inputClass} !mb-0 w-1/2`} />
+                    </div>
+                    <button type="submit" className="w-full text-purple-700 bg-purple-50 font-bold rounded-lg text-sm px-5 py-3 mt-1">Save to Database</button>
+                  </form>
+                  {rawMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{rawMessage}</p>}
+                </div>
+
+                <div>
+                   <h3 className="text-sm font-bold text-rose-600 mb-3 flex items-center gap-2">Danger Zone: Delete Material</h3>
+                   <ul className="divide-y divide-slate-100">
+                    {rawMaterials.map((item: any) => (
+                      <li key={item.id} className="py-2 flex justify-between items-center">
+                        <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                        <button onClick={() => handleDeleteRawMaterial(item.id)} className="text-rose-500 bg-rose-50 px-3 py-1 rounded text-xs font-bold">Delete</button>
                       </li>
                     ))}
                   </ul>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* --- TAB 3: ADMIN --- */}
-        <div className={activeTab === 'admin' ? 'block' : 'hidden'}>
-          <div className="space-y-6">
-            <div className={cardClass}>
-              <h2 className={titleClass}>Inventory Admin</h2>
-              
-              <div className="mb-6 pb-6 border-b border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <span className="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span> 
-                  Log Delivery (Restock)
-                </h3>
-                <form onSubmit={handleRestock} className="flex gap-2">
-                  <select value={restockId} onChange={(e: any) => setRestockId(e.target.value)} className={`${inputClass} !mb-0 w-3/5`} required>
-                    <option value="">-- Select Item --</option>
-                    {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                  </select>
-                  <input type="number" placeholder="+Qty" value={restockAmount} onChange={(e: any) => setRestockAmount(e.target.value)} className={`${inputClass} !mb-0 w-1/5`} required />
-                  <button type="submit" className="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-2 text-sm font-bold w-1/5">Add</button>
-                </form>
-                {restockMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{restockMessage}</p>}
               </div>
 
-              <div className="mb-6 pb-6 border-b border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                  <span className="bg-purple-100 text-purple-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span> 
-                  Create New Raw Material
-                </h3>
-                <form onSubmit={handleAddRawMaterial}>
-                  <input type="text" placeholder="Ingredient Name" value={rawName} onChange={(e: any) => setRawName(e.target.value)} className={inputClass} required />
-                  <div className="flex gap-2 mb-4">
-                    <select value={rawUnit} onChange={(e: any) => setRawUnit(e.target.value)} className={`${inputClass} !mb-0 w-1/2`}>
-                      <option value="grams">Grams (g)</option>
-                      <option value="ml">Milliliters (ml)</option>
-                      <option value="pieces">Pieces</option>
-                    </select>
-                    <input type="number" placeholder="Initial Stock" value={rawStock} onChange={(e: any) => setRawStock(e.target.value)} className={`${inputClass} !mb-0 w-1/2`} />
-                  </div>
-                  <button type="submit" className="w-full text-purple-700 bg-purple-50 font-bold rounded-lg text-sm px-5 py-3 mt-1">Save to Database</button>
-                </form>
-                {rawMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{rawMessage}</p>}
-              </div>
-
-              <div>
-                 <h3 className="text-sm font-bold text-rose-600 mb-3 flex items-center gap-2">Danger Zone: Delete Material</h3>
-                 <ul className="divide-y divide-slate-100">
-                  {rawMaterials.map((item: any) => (
-                    <li key={item.id} className="py-2 flex justify-between items-center">
-                      <span className="text-sm font-medium text-slate-700">{item.name}</span>
-                      <button onClick={() => handleDeleteRawMaterial(item.id)} className="text-rose-500 bg-rose-50 px-3 py-1 rounded text-xs font-bold">Delete</button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className={cardClass}>
-              <h2 className={titleClass}>Menu Manager</h2>
-              <div className="mb-6 pb-6 border-b border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">Add New Drink to Menu</h3>
-                <form onSubmit={handleAddMenuItem}>
-                  <input type="text" placeholder="Drink Name" value={menuName} onChange={(e: any) => setMenuName(e.target.value)} className={inputClass} required />
-                  <div className="flex gap-2">
-                    <input type="text" placeholder="SKU (Optional)" value={menuSku} onChange={(e: any) => setMenuSku(e.target.value)} className={`${inputClass} !mb-0 w-2/3`} />
-                    <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-2 text-sm font-bold w-1/3">Create</button>
-                  </div>
-                </form>
-                {menuMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{menuMessage}</p>}
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 mb-3">Active Menu (Tap to Delete)</h3>
-                <ul className="divide-y divide-slate-100">
-                  {menuItems.map((item: any) => (
-                    <li key={item.id} className="py-3 flex justify-between items-center">
-                      <span className="font-semibold text-sm text-slate-700">{item.name}</span>
-                      <button onClick={() => handleDeleteMenuItem(item.id)} className="text-slate-400 hover:text-rose-600 p-2">✕</button>
-                    </li>
-                  ))}
-                </ul>
+              <div className={cardClass}>
+                <h2 className={titleClass}>Menu Manager</h2>
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3">Add New Drink to Menu</h3>
+                  <form onSubmit={handleAddMenuItem}>
+                    <input type="text" placeholder="Drink Name" value={menuName} onChange={(e: any) => setMenuName(e.target.value)} className={inputClass} required />
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="SKU (Optional)" value={menuSku} onChange={(e: any) => setMenuSku(e.target.value)} className={`${inputClass} !mb-0 w-2/3`} />
+                      <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-2 text-sm font-bold w-1/3">Create</button>
+                    </div>
+                  </form>
+                  {menuMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{menuMessage}</p>}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 mb-3">Active Menu (Tap to Delete)</h3>
+                  <ul className="divide-y divide-slate-100">
+                    {menuItems.map((item: any) => (
+                      <li key={item.id} className="py-3 flex justify-between items-center">
+                        <span className="font-semibold text-sm text-slate-700">{item.name}</span>
+                        <button onClick={() => handleDeleteMenuItem(item.id)} className="text-slate-400 hover:text-rose-600 p-2">✕</button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
       </div>
 
@@ -430,15 +461,20 @@ export default function Home() {
           <span className="text-[10px] font-bold tracking-wide">Home</span>
         </button>
 
-        <button onClick={() => setActiveTab('recipes')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'recipes' ? 'text-blue-600' : 'text-slate-400'}`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-          <span className="text-[10px] font-bold tracking-wide">Recipes</span>
-        </button>
+        {/* ONLY ADMINS SEE THESE MOBILE ICONS */}
+        {userRole === 'admin' && (
+          <>
+            <button onClick={() => setActiveTab('recipes')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'recipes' ? 'text-blue-600' : 'text-slate-400'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              <span className="text-[10px] font-bold tracking-wide">Recipes</span>
+            </button>
 
-        <button onClick={() => setActiveTab('admin')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'admin' ? 'text-blue-600' : 'text-slate-400'}`}>
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          <span className="text-[10px] font-bold tracking-wide">Admin</span>
-        </button>
+            <button onClick={() => setActiveTab('admin')} className={`flex flex-col items-center justify-center w-full space-y-1 transition-colors ${activeTab === 'admin' ? 'text-blue-600' : 'text-slate-400'}`}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <span className="text-[10px] font-bold tracking-wide">Admin</span>
+            </button>
+          </>
+        )}
 
       </div>
     </div>
