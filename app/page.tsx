@@ -274,17 +274,37 @@ export default function Home() {
       
       {/* HEADER WITH LOGOUT */}
       <div className="bg-white border-b border-slate-200 pt-10 pb-6 px-6 mb-6 sticky top-0 z-40">
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
-              Kopi Kantin <span className="text-blue-600">SIMS</span>
+        <div className="max-w-3xl mx-auto flex justify-between items-start md:items-center">
+          <div className="pr-4">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none flex flex-wrap items-center gap-2 mb-1.5">
+              <span>Kopi Kantin <span className="text-blue-600">SIMS</span></span>
+              {/* Moved the VIP Badges up to the title line */}
+              {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm shrink-0">Admin</span>}
+              {userRole === 'staff' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm shrink-0">Staff</span>}
             </h1>
-            <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
-            Stock & Inventory Management 
-            {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Admin</span>}
-            {userRole === 'staff' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Staff Barista</span>}
+            <p className="text-slate-500 text-xs md:text-sm font-medium leading-snug">
+              Stock & Inventory Management
             </p>
+          </div>
+  
+          <div className="flex items-center gap-4 shrink-0 mt-1 md:mt-0">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
+            <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
+      
+            {userRole === 'admin' && (
+            <>
+            <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
+            <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
+            </>
+            )}
+          </div>
+    
+          <button onClick={handleLogout} className="text-sm font-bold text-slate-500 hover:text-rose-600 transition-colors bg-slate-100 hover:bg-rose-50 px-3 py-2 rounded-xl shrink-0">
+          Log Out
+          </button>
         </div>
+      </div>
           
           <div className="flex items-center gap-4">
             <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
