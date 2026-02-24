@@ -323,7 +323,7 @@ export default function Home() {
                   <h2 className={titleClass + " mb-0"}>Digital Pantry Stock</h2>
                   {lastUpdated && (
                   <p className="text-xs text-slate-400 font-medium mt-1">
-                  Updated at {lastUpdated.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    Updated: {lastUpdated.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit' })}
                   </p>
                   )}
                 </div>
