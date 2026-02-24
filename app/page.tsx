@@ -223,7 +223,13 @@ export default function Home() {
               <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass + " !mb-0"} required />
             </div>
             
-            <button type="submit" disabled={authLoading} className="w-full text-white bg-blue-600 hover:bg-blue-700 font-bold rounded-xl text-sm px-5 py-3.5 transition-colors shadow-sm disabled:opacity-70 mt-4">
+            <button 
+              type="submit" 
+              disabled={authLoading} 
+              className={`w-full text-white font-bold rounded-xl text-sm px-5 py-3.5 transition-colors shadow-sm disabled:opacity-70 mt-4 ${
+              isSignUp ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              >
               {authLoading ? 'Authenticating...' : (isSignUp ? 'Create Account' : 'Secure Login')}
             </button>
             
