@@ -208,9 +208,9 @@ export default function Home() {
         <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 mb-2">
-              Kopi Kantin <span className="text-blue-600">HQ</span>
+              Kopi Kantin <span className="text-blue-600">SIMS</span>
             </h1>
-            <p className="text-slate-500 font-medium text-sm">Authorized Personnel Only</p>
+            <p className="text-slate-500 font-medium text-sm">Stock & Inventory Management System</p>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-4">
@@ -261,14 +261,14 @@ export default function Home() {
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
-              Kopi Kantin <span className="text-blue-600">HQ</span>
+              Kopi Kantin <span className="text-blue-600">SIMS</span>
             </h1>
             <p className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
-              Production System 
-              {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Admin</span>}
-              {userRole === 'staff' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Staff Barista</span>}
+            Stock & Inventory Management 
+            {userRole === 'admin' && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Admin</span>}
+            {userRole === 'staff' && <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider shadow-sm">Staff Barista</span>}
             </p>
-          </div>
+        </div>
           
           <div className="flex items-center gap-4">
             <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
