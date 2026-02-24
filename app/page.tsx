@@ -45,6 +45,8 @@ export default function Home() {
   const [menuSku, setMenuSku] = useState('')
   const [menuMessage, setMenuMessage] = useState('')
 
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
   // --- INITIALIZATION & ROLE FETCHING ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -91,6 +93,9 @@ export default function Home() {
     if (menuData) setMenuItems(menuData)
     if (recipeData) setRecipes(recipeData)
     if (teamData) setTeamMembers(teamData)
+
+    // NEW: Log the exact time we pulled fresh data
+    setLastUpdated(new Date())
   }
 
   // --- AUTH FUNCTIONS ---
@@ -314,8 +319,15 @@ export default function Home() {
 
             <div className={cardClass}>
               <div className="flex justify-between items-center mb-6">
-                <h2 className={titleClass + " mb-0"}>Digital Pantry Stock</h2>
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <div>
+                  <h2 className={titleClass + " mb-0"}>Digital Pantry Stock</h2>
+                  {lastUpdated && (
+                  <p className="text-xs text-slate-400 font-medium mt-1">
+                  Updated at {lastUpdated.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </p>
+                  )}
+                </div>
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
               </div>
               <ul className="divide-y divide-slate-100">
                 {rawMaterials.length === 0 && <p className="text-sm text-slate-500 italic">Pantry is empty.</p>}
