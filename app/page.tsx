@@ -286,27 +286,9 @@ export default function Home() {
               Stock & Inventory Management
             </p>
           </div>
-  
+          
           <div className="flex items-center gap-4 shrink-0 mt-1 md:mt-0">
             {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
-            <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
-      
-            {userRole === 'admin' && (
-            <>
-            <button onClick={() => setActiveTab('recipes')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'recipes' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Recipes</button>
-            <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'admin' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Admin</button>
-            </>
-            )}
-          </div>
-    
-          <button onClick={handleLogout} className="text-sm font-bold text-slate-500 hover:text-rose-600 transition-colors bg-slate-100 hover:bg-rose-50 px-3 py-2 rounded-xl shrink-0">
-          Log Out
-          </button>
-        </div>
-      </div>
-          
-          <div className="flex items-center gap-4">
             <div className="hidden md:flex space-x-2 bg-slate-100 p-1 rounded-lg">
               <button onClick={() => setActiveTab('home')} className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'home' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Dashboard</button>
               
@@ -318,7 +300,7 @@ export default function Home() {
               )}
             </div>
             
-            <button onClick={handleLogout} className="text-sm font-bold text-slate-400 hover:text-rose-600 transition-colors bg-slate-50 hover:bg-rose-50 px-3 py-2 rounded-lg">
+            <button onClick={handleLogout} className="text-sm font-bold text-slate-500 hover:text-rose-600 transition-colors bg-slate-100 hover:bg-rose-50 px-3 py-2 rounded-xl shrink-0">
               Log Out
             </button>
           </div>
