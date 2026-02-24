@@ -87,15 +87,26 @@ export default function Home() {
     const { data: rawData } = await supabase.from('raw_materials').select('*').order('name')
     const { data: menuData } = await supabase.from('menu_items').select('*').order('name')
     const { data: recipeData } = await supabase.from('recipes').select('id, menu_item_id, quantity_needed, raw_materials(name, unit)')
-    const { data: teamData } = await supabase.from('profiles').select('*').order('role') // Fetch Team
+    const { data: teamData } = await supabase.from('profiles').select('*').order('role')
       
-    if (rawData) setRawMaterials(rawData)
+    if (rawData) {
+      setRawMaterials(rawData)
+      
+      // Scan all ingredients and find the absolute most recent 'updated_at' time
+      const latestTime = rawData.reduce((latest, item) => {
+        const itemTime = new Date(item.updated_at || item.created_at || 0)
+        return itemTime > latest ? itemTime : latest
+      }, new Date(0))
+      
+      // Update the UI with the true last modified database time
+      if (latestTime.getTime() > 0) {
+        setLastUpdated(latestTime)
+      }
+    }
+    
     if (menuData) setMenuItems(menuData)
     if (recipeData) setRecipes(recipeData)
     if (teamData) setTeamMembers(teamData)
-
-    // NEW: Log the exact time we pulled fresh data
-    setLastUpdated(new Date())
   }
 
   // --- AUTH FUNCTIONS ---
