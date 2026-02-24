@@ -343,10 +343,10 @@ export default function Home() {
               <ul className="divide-y divide-slate-100">
                 {rawMaterials.length === 0 && <p className="text-sm text-slate-500 italic">Pantry is empty.</p>}
                 {rawMaterials.map((item: any) => (
-                  <li key={item.id} className="py-3 flex justify-between items-center group">
-                    <span className="font-medium text-slate-800">{item.name}</span>
-                    <span className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-lg">
-                      {item.current_stock} <span className="text-slate-500 font-normal text-sm">{item.unit}</span>
+                  <li key={item.id} className="py-3 flex justify-between items-center group gap-4">
+                    <span className="font-medium text-slate-800 leading-tight">{item.name}</span>
+                    <span className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-lg whitespace-nowrap shrink-0">
+                    {item.current_stock} <span className="text-slate-500 font-normal text-sm">{item.unit}</span>
                     </span>
                   </li>
                 ))}
