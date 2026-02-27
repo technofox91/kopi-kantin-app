@@ -15,6 +15,7 @@ export default function Home() {
   const [isSignUp, setIsSignUp] = useState(false)
 
   // --- NAVIGATION & DATA STATE ---
+  const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('home')
   const [rawMaterials, setRawMaterials] = useState<any[]>([])
   const [menuItems, setMenuItems] = useState<any[]>([])
@@ -210,6 +211,7 @@ export default function Home() {
 
   const displayedRecipes = recipes.filter((r: any) => r.menu_item_id === viewMenuId)
 
+  const filteredMaterials = rawMaterials.filter((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
   const inputClass = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none transition-all mb-4 appearance-none"
   const labelClass = "block mb-1.5 text-sm font-semibold text-slate-700"
   const cardClass = "bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col transition-all"
@@ -335,27 +337,42 @@ export default function Home() {
                 <div>
                   <h2 className={titleClass + " mb-0"}>Digital Pantry Stock</h2>
                   {lastUpdated && (
-                  <p className="text-xs text-slate-400 font-medium mt-1">
-                    Updated: {lastUpdated.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit' })}
-                  </p>
+                    <p className="text-xs text-slate-400 font-medium mt-1">
+                      Updated: {lastUpdated.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute:'2-digit' })}
+                    </p>
                   )}
                 </div>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)] shrink-0"></div>
               </div>
+
+              {/* NEW SEARCH BAR */}
+              <div className="mb-4 relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                  </svg>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Search ingredients..." 
+                  value={searchQuery} 
+                  onChange={(e: any) => setSearchQuery(e.target.value)} 
+                  className="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5 outline-none transition-all appearance-none" 
+                />
+              </div>
+
               <ul className="divide-y divide-slate-100">
-                {rawMaterials.length === 0 && <p className="text-sm text-slate-500 italic">Pantry is empty.</p>}
-                {rawMaterials.map((item: any) => (
+                {filteredMaterials.length === 0 && <p className="text-sm text-slate-500 italic py-2">No ingredients found.</p>}
+                {filteredMaterials.map((item: any) => (
                   <li key={item.id} className="py-3 flex justify-between items-center group gap-4">
                     <span className="font-medium text-slate-800 leading-tight">{item.name}</span>
                     <span className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-lg whitespace-nowrap shrink-0">
-                    {item.current_stock} <span className="text-slate-500 font-normal text-sm">{item.unit}</span>
+                      {item.current_stock} <span className="text-slate-500 font-normal text-sm">{item.unit}</span>
                     </span>
                   </li>
                 ))}
               </ul>
             </div>
-          </div>
-        </div>
 
         {/* --- TAB 2: RECIPES --- */}
         {userRole === 'admin' && (
