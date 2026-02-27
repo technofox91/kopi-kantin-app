@@ -577,12 +577,12 @@ export default function Home() {
                     Update Alert Threshold (Seasonality)
                   </h3>
                   <form onSubmit={handleUpdateMinStock} className="flex gap-2">
-                    <select value={editMinId} onChange={(e: any) => setEditMinId(e.target.value)} className={`${inputClass} !mb-0 w-3/5`} required>
+                    <select value={editMinId} onChange={(e: any) => setEditMinId(e.target.value)} className={`${inputClass} !mb-0 flex-1 min-w-0`} required>
                       <option value="">-- Select Item --</option>
                       {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
                     </select>
-                    <input type="number" placeholder="New Min" value={editMinAmount} onChange={(e: any) => setEditMinAmount(e.target.value)} className={`${inputClass} !mb-0 w-1/5`} required />
-                    <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white rounded-lg px-2 text-sm font-bold w-1/5 transition-colors">Update</button>
+                    <input type="number" placeholder="Min" value={editMinAmount} onChange={(e: any) => setEditMinAmount(e.target.value)} className={`${inputClass} !mb-0 w-20 shrink-0`} required />
+                    <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white rounded-lg px-4 text-sm font-bold shrink-0 transition-colors">Update</button>
                   </form>
                   {editMinMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{editMinMessage}</p>}
                 </div>
