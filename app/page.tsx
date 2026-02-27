@@ -37,6 +37,11 @@ export default function Home() {
   const [rawUnit, setRawUnit] = useState('grams')
   const [rawStock, setRawStock] = useState('')
   const [rawMessage, setRawMessage] = useState('')
+  const [rawName, setRawName] = useState('')
+  const [rawUnit, setRawUnit] = useState('grams')
+  const [rawStock, setRawStock] = useState('')
+  const [rawMinStock, setRawMinStock] = useState('') // NEW: The Alert Threshold
+  const [rawMessage, setRawMessage] = useState('')
 
   const [restockId, setRestockId] = useState('')
   const [restockAmount, setRestockAmount] = useState('')
@@ -170,9 +175,20 @@ export default function Home() {
   const handleAddRawMaterial = async (e: any) => {
     e.preventDefault(); setRawMessage('Adding...')
     if (!rawName || !rawUnit) return
-    const { error } = await supabase.from('raw_materials').insert({ name: rawName, unit: rawUnit, current_stock: parseFloat(rawStock || '0') })
+    const { error } = await supabase.from('raw_materials').insert({ 
+      name: rawName, 
+      unit: rawUnit, 
+      current_stock: parseFloat(rawStock || '0'),
+      min_stock_level: parseFloat(rawMinStock || '0') // NEW: Save to database
+    })
     if (error) setRawMessage('Error: ' + error.message)
-    else { setRawMessage(`Success!`); setRawName(''); setRawStock(''); fetchData() }
+    else { 
+      setRawMessage(`Success!`); 
+      setRawName(''); 
+      setRawStock(''); 
+      setRawMinStock(''); // Clear the box after saving
+      fetchData() 
+    }
   }
 
   const handleRestock = async (e: any) => {
@@ -482,15 +498,19 @@ export default function Home() {
                   </h3>
                   <form onSubmit={handleAddRawMaterial}>
                     <input type="text" placeholder="Ingredient Name" value={rawName} onChange={(e: any) => setRawName(e.target.value)} className={inputClass} required />
-                    <div className="flex gap-2 mb-4">
-                      <select value={rawUnit} onChange={(e: any) => setRawUnit(e.target.value)} className={`${inputClass} !mb-0 w-1/2`}>
+                    
+                    <div className="flex gap-2 mb-2">
+                      <select value={rawUnit} onChange={(e: any) => setRawUnit(e.target.value)} className={`${inputClass} !mb-0 w-1/3`}>
                         <option value="grams">Grams (g)</option>
                         <option value="ml">Milliliters (ml)</option>
                         <option value="pieces">Pieces</option>
                       </select>
-                      <input type="number" placeholder="Initial Stock" value={rawStock} onChange={(e: any) => setRawStock(e.target.value)} className={`${inputClass} !mb-0 w-1/2`} />
+                      <input type="number" placeholder="Current Stock" value={rawStock} onChange={(e: any) => setRawStock(e.target.value)} className={`${inputClass} !mb-0 w-1/3`} />
+                      <input type="number" placeholder="Min Alert Level" value={rawMinStock} onChange={(e: any) => setRawMinStock(e.target.value)} className={`${inputClass} !mb-0 w-1/3 border-purple-200 bg-purple-50`} />
                     </div>
-                    <button type="submit" className="w-full text-purple-700 bg-purple-50 font-bold rounded-lg text-sm px-5 py-3 mt-1">Save to Database</button>
+                    <p className="text-[10px] text-slate-500 mb-4 px-1">Set 'Min Alert Level' to trigger low stock warnings on the dashboard.</p>
+                    
+                    <button type="submit" className="w-full text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors font-bold rounded-lg text-sm px-5 py-3 mt-1">Save to Database</button>
                   </form>
                   {rawMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{rawMessage}</p>}
                 </div>
