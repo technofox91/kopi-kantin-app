@@ -223,7 +223,27 @@ export default function Home() {
 
   const displayedRecipes = recipes.filter((r: any) => r.menu_item_id === viewMenuId)
 
-  const filteredMaterials = rawMaterials.filter((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  // 1. Filter by search, then sort by stock urgency
+  const filteredMaterials = rawMaterials
+    .filter((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a: any, b: any) => {
+      const getUrgency = (item: any) => {
+        const current = parseFloat(item.current_stock)
+        const min = parseFloat(item.min_stock_level || '0')
+        if (min === 0) return 3 // Healthy (No threshold set)
+        if (current <= min) return 1 // Critical (Red)
+        if (current <= min * 1.25) return 2 // Warning (Orange - within 25% of minimum)
+        return 3 // Healthy (Blue)
+      }
+      
+      const urgencyA = getUrgency(a)
+      const urgencyB = getUrgency(b)
+      
+      // If urgencies are different, sort by urgency first (1 comes before 3)
+      if (urgencyA !== urgencyB) return urgencyA - urgencyB
+      // If urgencies are the same, sort alphabetically
+      return a.name.localeCompare(b.name)
+    })
   const inputClass = "w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none transition-all mb-4 appearance-none"
   const labelClass = "block mb-1.5 text-sm font-semibold text-slate-700"
   const cardClass = "bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col transition-all"
@@ -376,14 +396,34 @@ export default function Home() {
 
               <ul className="divide-y divide-slate-100">
                 {filteredMaterials.length === 0 && <p className="text-sm text-slate-500 italic py-2">No ingredients found.</p>}
-                {filteredMaterials.map((item: any) => (
-                  <li key={item.id} className="py-3 flex justify-between items-center group gap-4">
-                    <span className="font-medium text-slate-800 leading-tight">{item.name}</span>
-                    <span className="text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-lg whitespace-nowrap shrink-0">
-                      {item.current_stock} <span className="text-slate-500 font-normal text-sm">{item.unit}</span>
-                    </span>
-                  </li>
-                ))}
+                
+                {filteredMaterials.map((item: any) => {
+                  const current = parseFloat(item.current_stock);
+                  const min = parseFloat(item.min_stock_level || '0');
+                  
+                  // Default to Healthy Blue
+                  let badgeColor = "bg-blue-50 text-blue-600";
+                  let icon = "";
+                  
+                  // Apply Traffic Light Logic
+                  if (min > 0) {
+                    if (current <= min) {
+                      badgeColor = "bg-rose-100 text-rose-700 shadow-sm border border-rose-200";
+                      icon = "⚠️ ";
+                    } else if (current <= min * 1.25) {
+                      badgeColor = "bg-orange-100 text-orange-700 border border-orange-200";
+                    }
+                  }
+
+                  return (
+                    <li key={item.id} className="py-3 flex justify-between items-center group gap-4">
+                      <span className="font-medium text-slate-800 leading-tight">{item.name}</span>
+                      <span className={`font-bold px-3 py-1 rounded-lg whitespace-nowrap shrink-0 transition-colors ${badgeColor}`}>
+                        {icon}{item.current_stock} <span className="opacity-75 font-normal text-sm">{item.unit}</span>
+                      </span>
+                    </li>
+                  )
+                })}
               </ul>
             </div>
             
