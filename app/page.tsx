@@ -315,6 +315,7 @@ export default function Home() {
         {/* --- TAB 1: DASHBOARD --- */}
         <div className={activeTab === 'home' ? 'block' : 'hidden'}>
           <div className="space-y-6">
+            
             <div className={`${cardClass} border-t-4 border-t-emerald-500`}>
               <h2 className={titleClass}>Friday Production Run</h2>
               <form onSubmit={handleProductionRun} className="flex-1 flex flex-col">
@@ -373,6 +374,9 @@ export default function Home() {
                 ))}
               </ul>
             </div>
+            
+          </div>
+        </div>
 
         {/* --- TAB 2: RECIPES --- */}
         {userRole === 'admin' && (
