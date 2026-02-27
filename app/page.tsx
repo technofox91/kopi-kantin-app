@@ -36,11 +36,7 @@ export default function Home() {
   const [rawName, setRawName] = useState('')
   const [rawUnit, setRawUnit] = useState('grams')
   const [rawStock, setRawStock] = useState('')
-  const [rawMessage, setRawMessage] = useState('')
-  const [rawName, setRawName] = useState('')
-  const [rawUnit, setRawUnit] = useState('grams')
-  const [rawStock, setRawStock] = useState('')
-  const [rawMinStock, setRawMinStock] = useState('') // NEW: The Alert Threshold
+  const [rawMinStock, setRawMinStock] = useState('')
   const [rawMessage, setRawMessage] = useState('')
 
   const [restockId, setRestockId] = useState('')
