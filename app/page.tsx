@@ -43,6 +43,10 @@ export default function Home() {
   const [restockAmount, setRestockAmount] = useState('')
   const [restockMessage, setRestockMessage] = useState('')
 
+  const [editMinId, setEditMinId] = useState('')
+  const [editMinAmount, setEditMinAmount] = useState('')
+  const [editMinMessage, setEditMinMessage] = useState('')
+
   const [menuName, setMenuName] = useState('')
   const [menuSku, setMenuSku] = useState('')
   const [menuMessage, setMenuMessage] = useState('')
@@ -183,6 +187,21 @@ export default function Home() {
       setRawName(''); 
       setRawStock(''); 
       setRawMinStock(''); // Clear the box after saving
+      fetchData() 
+    }
+  }
+
+  const handleUpdateMinStock = async (e: any) => {
+    e.preventDefault(); setEditMinMessage('Updating...')
+    if (!editMinId || editMinAmount === '') return
+    const { error } = await supabase.from('raw_materials')
+      .update({ min_stock_level: parseFloat(editMinAmount) })
+      .eq('id', editMinId)
+    if (error) setEditMinMessage('Error: ' + error.message)
+    else { 
+      setEditMinMessage(`Success!`); 
+      setEditMinId(''); 
+      setEditMinAmount(''); 
       fetchData() 
     }
   }
@@ -549,6 +568,23 @@ export default function Home() {
                     <button type="submit" className="w-full text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors font-bold rounded-lg text-sm px-5 py-3 mt-1">Save to Database</button>
                   </form>
                   {rawMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{rawMessage}</p>}
+                </div>
+
+                {/* --- START OF NEW SECTION 3 (Update Alert Threshold) --- */}
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <span className="bg-amber-100 text-amber-600 w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span> 
+                    Update Alert Threshold (Seasonality)
+                  </h3>
+                  <form onSubmit={handleUpdateMinStock} className="flex gap-2">
+                    <select value={editMinId} onChange={(e: any) => setEditMinId(e.target.value)} className={`${inputClass} !mb-0 w-3/5`} required>
+                      <option value="">-- Select Item --</option>
+                      {rawMaterials.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </select>
+                    <input type="number" placeholder="New Min" value={editMinAmount} onChange={(e: any) => setEditMinAmount(e.target.value)} className={`${inputClass} !mb-0 w-1/5`} required />
+                    <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white rounded-lg px-2 text-sm font-bold w-1/5 transition-colors">Update</button>
+                  </form>
+                  {editMinMessage && <p className="mt-2 text-xs font-medium text-emerald-600">{editMinMessage}</p>}
                 </div>
 
                 <div>
